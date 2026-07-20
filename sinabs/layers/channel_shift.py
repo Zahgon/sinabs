@@ -20,4 +20,4 @@ class ChannelShift(nn.Module):
         self.padding[-2] = channel_shift
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return nn.functional.pad(input=x, pad=self.padding, mode="constant", value=0)
+        pass

@@ -72,17 +72,14 @@ class DynapcnnNetwork(nn.Module):
         super().__init__()
 
         if isinstance(snn, sinabs.Network):
-            # Ignore `analog_model` of sinabs `Network` instances
             snn = snn.spiking_model
 
         self.dvs_input = dvs_input
         self.input_shape = infer_input_shape(snn, input_shape)
         self._layer2core_map = None
 
-        # Infer batch size for dummy input to graph extractor
         if batch_size is None:
             batch_size = sinabs.utils.get_smallest_compatible_time_dimension(snn)
-        # computational graph from original PyTorch module.
         self._graph_extractor = GraphExtractor(
             snn,
             torch.randn((batch_size, *self.input_shape)),
@@ -90,14 +87,8 @@ class DynapcnnNetwork(nn.Module):
             ignore_node_types=COMPLETELY_IGNORED_LAYER_TYPES,
         )
 
-        # Remove nodes of ignored classes (including merge nodes)
-        # Other than `COMPLETELY_IGNORED_LAYER_TYPES`, `IGNORED_LAYER_TYPES` are
-        # part of the graph initially and are needed to ensure proper handling of
-        # graph structure (e.g. Merge nodes) or meta-information (e.g.
-        # `nn.Flatten` for io-shapes)
         self._graph_extractor.remove_nodes_by_class(IGNORED_LAYER_TYPES)
 
-        # Module to execute forward pass through network
         self._dynapcnn_module = self._graph_extractor.get_dynapcnn_network_module(
             discretize=discretize, weight_rescaling_fn=weight_rescaling_fn
         )
@@ -105,130 +96,59 @@ class DynapcnnNetwork(nn.Module):
 
     @property
     def all_layers(self):
-        return self._dynapcnn_module.all_layers
+        pass
 
     @property
     def dvs_node_info(self):
-        return self._dynapcnn_module.dvs_node_info
+        pass
 
     @property
     def dvs_layer(self):
-        return self._dynapcnn_module.dvs_layer
+        pass
 
     @property
     def chip_layers_ordering(self):
-        warn(
-            "`chip_layers_ordering` is deprecated. Returning `layer2core_map` instead.",
-            DeprecationWarning,
-        )
-        return self._layer2core_map
+        pass
 
     @property
     def dynapcnn_layers(self):
-        return self._dynapcnn_module.dynapcnn_layers
+        pass
 
     @property
     def dynapcnn_module(self):
-        return self._dynapcnn_module
+        pass
 
     @property
     def exit_layers(self):
-        return [self.all_layers[i] for i in self._dynapcnn_module.get_exit_layers()]
+        pass
 
     @property
     def exit_layer_ids(self):
-        return self._dynapcnn_module.get_exit_layers()
+        pass
 
     @property
     def is_deployed_on_dynapcnn_device(self):
-        return (
-            hasattr(self, "device")
-            and parse_device_id(self.device)[0] in ChipFactory.supported_devices
-        )
+        pass
 
     @property
     def layer_destination_map(self):
-        return self._dynapcnn_module.destination_map
+        pass
 
     @property
     def layer2core_map(self):
-        return self._layer2core_map
+        pass
 
     @property
     def name_2_indx_map(self):
-        return self._graph_extractor.name_2_indx_map
+        pass
 
     def hw_forward(self, x):
-        """Forwards data through the chip."""
-
-        # flush buffer.
-        _ = self.samna_output_buffer.get_events()
-
-        # Reset and enable timestamp
-        reset_timestamps(self.device)
-        enable_timestamps(self.device)
-
-        # send input.
-        self.samna_input_buffer.write(x)
-        received_evts = []
-
-        # record at least until the last event has been replayed.
-        min_duration = max(event.timestamp for event in x) * 1e-6
-        time.sleep(min_duration)
-
-        # keep recording if more events are being registered.
-        while True:
-            prev_length = len(received_evts)
-            time.sleep(0.1)
-            received_evts.extend(self.samna_output_buffer.get_events())
-            if prev_length == len(received_evts):
-                break
-
-        # disable timestamp
-        disable_timestamps(self.device)
-
-        return received_evts
+        pass
 
     def forward(
         self, x, return_complete: bool = False
     ) -> Union[List["event"], Tensor, Dict[int, Dict[int, Tensor]]]:
-        """Forwards data through the `DynapcnnNetwork` instance.
-
-        If the network has been deployed on a Dynapcnn/Speck device the forward
-        pass happens on the devices. Otherwise the device will be simulated by
-        passing the data through the `DynapcnnLayer` instances.
-
-        Args:
-            x: Tensor that serves as input to network. Is passed to all layers
-                that are marked as entry points
-            return_complete: bool that indicates whether all layer outputs should
-                be return or only those with no further destinations (default)
-
-        Returns:
-            The returned object depends on whether the network has been deployed
-            on chip. If this is the case, a flat list of samna events is returned,
-            in the order in which the events have been collected.
-            If the data is passed through the `DynapcnnLayer` instances, the output
-            depends on `return_complete` and on the network configuration:
-            * If `return_complete` is `True`, all layer outputs will be returned in a
-            dict, with layer indices as keys, and nested dicts as values, which
-            hold destination indices as keys and output tensors as values.
-            * If `return_complete` is `False` and there is only a single destination
-            in the whole network that is marked as final (i.e. destination
-            index in dynapcnn layer handler is negative), it will return the
-            output as a single tensor.
-            * If `return_complete` is `False` and no destination in the network
-            is marked as final, a warning will be raised and the function
-            returns an empty dict.
-            * In all other cases a dict will be returned that is of the same
-            structure as if `return_complete` is `True`, but only with entries
-            where the destination is marked as final.
-        """
-        if self.is_deployed_on_dynapcnn_device:
-            return self.hw_forward(x)
-        else:
-            # Forward pass through software DynapcnnLayer instance
-            return self.dynapcnn_module(x, return_complete=return_complete)
+        pass
 
     def parameters(self) -> list:
         """Gathers all the parameters of the network in a list. This is done by accessing the convolutional layer in each `DynapcnnLayer`,
@@ -255,8 +175,6 @@ class DynapcnnNetwork(nn.Module):
             Each nested dict has as keys the indices of all dynapcnn_layers and
             as values the corresonding memory values for each layer.
         """
-        # For each entry (kernel, neuron, bias) provide one nested dict with
-        # one entry for each layer
         summary = {key: dict() for key in ("kernel", "neuron", "bias")}
 
         for layer_index, layer in self.dynapcnn_layers.items():
@@ -266,23 +184,10 @@ class DynapcnnNetwork(nn.Module):
         return summary
 
     def init_weights(self, init_fn: nn.init = nn.init.xavier_normal_) -> None:
-        """Call the weight initialization method `init_fn` on each `DynapcnnLayer.conv_layer.weight.data` in the `DynapcnnNetwork` instance.
-
-        Args:
-            init_fn (torch.nn.init): the weight initialization method to be used.
-        """
-        for layer in self.dynapcnn_layers.values():
-            if isinstance(layer, DynapcnnLayer):
-                init_fn(layer.conv_layer.weight.data)
+        pass
 
     def detach_neuron_states(self) -> None:
-        """Detach the neuron states and activations from current computation graph (necessary)."""
-
-        for module in self.dynapcnn_layers.values():
-            if isinstance(module, DynapcnnLayer):
-                if isinstance(module.spk_layer, sl.StatefulLayer):
-                    for name, buffer in module.spk_layer.named_buffers():
-                        buffer.detach_()
+        pass
 
     def to(
         self,
@@ -344,7 +249,6 @@ class DynapcnnNetwork(nn.Module):
             device_name, _ = parse_device_id(device)
 
             if device_name in ChipFactory.supported_devices:
-                # generate config.
                 config = self.make_config(
                     layer2core_map=layer2core_map,
                     chip_layers_ordering=chip_layers_ordering,
@@ -353,12 +257,10 @@ class DynapcnnNetwork(nn.Module):
                     config_modifier=config_modifier,
                 )
 
-                # apply configuration to device
                 self.samna_device = open_device(device)
                 self.samna_device.get_model().apply_configuration(config)
                 time.sleep(1)
 
-                # set external slow-clock if needed
                 if slow_clk_frequency is not None:
                     dk_io = self.samna_device.get_io_module()
                     dk_io.set_slow_clk(True)
@@ -366,13 +268,10 @@ class DynapcnnNetwork(nn.Module):
 
                 builder = ChipFactory(device).get_config_builder()
 
-                # create input source node
                 self.samna_input_buffer = builder.get_input_buffer()
 
-                # create output sink node node.
                 self.samna_output_buffer = builder.get_output_buffer()
 
-                # connect source node to device sink.
                 self.device_input_graph = samna.graph.EventFilterGraph()
                 self.device_input_graph.sequential(
                     [
@@ -381,7 +280,6 @@ class DynapcnnNetwork(nn.Module):
                     ]
                 )
 
-                # connect sink node to device.
                 self.device_output_graph = samna.graph.EventFilterGraph()
                 self.device_output_graph.sequential(
                     [
@@ -446,30 +344,13 @@ class DynapcnnNetwork(nn.Module):
             monitor_layers=monitor_layers,
             config_modifier=config_modifier,
         )
-        # Validate config
         if is_compatible:
             return config
         else:
             raise ValueError(f"Generated config is not valid for {device}")
 
     def is_compatible_with(self, device_type: str) -> bool:
-        """Check if the current model is compatible with a given device.
-
-        Args:
-            device_type (str): Device type, for example: speck2fmodule
-
-        Returns:
-            bool: True if compatible
-        """
-        try:
-            _, is_compatible = self._make_config(device=device_type)
-        except ValueError as e:
-            # Catch "No valid mapping found" error, it is the first sentence in the string
-            if e.args[0].find("No valid mapping found.") == 0:
-                return False
-            else:
-                raise e
-        return is_compatible
+        pass
 
     def make_config(
         self,
@@ -528,7 +409,6 @@ class DynapcnnNetwork(nn.Module):
             chip_layers_ordering=chip_layers_ordering,
         )
 
-        # Validate config
         if is_compatible:
             print("Network is valid")
             return config
@@ -540,22 +420,10 @@ class DynapcnnNetwork(nn.Module):
             )
 
     def has_dvs_layer(self) -> bool:
-        """Return True if there is a DVSLayer in the network
-
-        Returns:
-            True if DVSLayer is found within the network.
-        """
-        return self.dvs_layer is not None
+        pass
 
     def zero_grad(self, set_to_none: bool = False) -> None:
-        """Call `zero_grad` method of each DynapCNN layer
-
-        Args:
-            set_to_none (bool): This argument is passed directly to the
-                `zero_grad` method of each DynapCNN layer
-        """
-        for lyr in self.dynapcnn_layers.values():
-            lyr.zero_grad(set_to_none)
+        pass
 
     def reset_states(self, randomize=False):
         """Reset the states of the network.
@@ -568,16 +436,11 @@ class DynapcnnNetwork(nn.Module):
         """
         if hasattr(self, "device") and isinstance(self.device, str):  # pragma: no cover
             device_name, _ = parse_device_id(self.device)
-            # Reset states on SynSense device
             if device_name in ChipFactory.supported_devices:
                 config_builder = ChipFactory(self.device).get_config_builder()
-                # Set all the vmem states in the samna config to zero
                 config_builder.reset_states(self.samna_config, randomize=randomize)
                 self.samna_device.get_model().apply_configuration(self.samna_config)
-                # wait for the config to be written
                 time.sleep(1)
-                # Note: The below shouldn't be necessary ideally
-                # Erase all vmem memory
                 if not randomize:
                     if hasattr(self, "samna_input_graph"):
                         self.samna_input_graph.stop()
@@ -589,7 +452,6 @@ class DynapcnnNetwork(nn.Module):
                         self.samna_input_graph.start()
                 return
 
-        # Reset states of `DynapcnnLayer` instances
         for layer in self.sequence:
             if isinstance(layer, DynapcnnLayer):
                 layer.spk_layer.reset_states(randomize=randomize)
@@ -678,7 +540,6 @@ class DynapcnnNetwork(nn.Module):
                     DeprecationWarning,
                 )
         if layer2core_map == "auto":
-            # Assign chip core ID for each DynapcnnLayer.
             layer2core_map = config_builder.map_layers_to_cores(self.dynapcnn_layers)
         else:
             if not layer2core_map.keys() == self.dynapcnn_layers.keys():
@@ -689,7 +550,6 @@ class DynapcnnNetwork(nn.Module):
 
         self._layer2core_map = layer2core_map
 
-        # update config (config. DynapcnnLayer instances into their assigned core).
         config = config_builder.build_config(
             layers=self.all_layers,
             layer2core_map=layer2core_map,
@@ -697,7 +557,6 @@ class DynapcnnNetwork(nn.Module):
         )
 
         if monitor_layers is None:
-            # Monitor all layers with exit point destinations
             monitor_layers = self._dynapcnn_module.get_exit_layers()
         elif monitor_layers == "all":
             monitor_layers = [
@@ -706,11 +565,9 @@ class DynapcnnNetwork(nn.Module):
                 if not isinstance(layer, DVSLayer)
             ]
         elif -1 in monitor_layers:
-            # Replace `-1` with exit layer IDs
             monitor_layers.remove(-1)
             monitor_layers += self._dynapcnn_module.get_exit_layers()
 
-        # Collect cores (chip layers) that are to be monitored
         monitor_chip_layers = []
         for lyr_idx in monitor_layers:
             if str(lyr_idx).lower() == "dvs":
@@ -718,14 +575,11 @@ class DynapcnnNetwork(nn.Module):
             else:
                 monitor_chip_layers.append(layer2core_map[lyr_idx])
 
-        # enable monitors on the specified layers
         config_builder.monitor_layers(config, monitor_chip_layers)
 
         if config_modifier is not None:
-            # apply user config modifier.
             config = config_modifier(config)
 
-        # Validate config
         return config, config_builder.validate_configuration(config)
 
     def _to_device(self, device: torch.device) -> None:
@@ -772,7 +626,6 @@ class DynapcnnNetwork(nn.Module):
 
 
 class DynapcnnCompatibleNetwork(DynapcnnNetwork):
-    """Deprecated class, use DynapcnnNetwork instead."""
 
     def __init__(self, *args, **kwargs):
         from warnings import warn

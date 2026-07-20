@@ -5,12 +5,6 @@ import torch
 
 
 class StatefulLayer(torch.nn.Module):
-    """A base class that instantiates buffers/states which update at every time step and provides
-    helper methods that manage those states.
-
-    Args:
-        state_names: the PyTorch buffers to initialise. These are not parameters.
-    """
 
     def __init__(self, state_names: List[str]):
         super().__init__()
@@ -19,19 +13,7 @@ class StatefulLayer(torch.nn.Module):
             self.register_buffer(state_name, torch.zeros((0)))
 
     def zero_grad(self, set_to_none: bool = False) -> None:
-        r"""Zero's the gradients for buffers/state along with the parameters.
-
-        See :meth:`torch.nn.Module.zero_grad` for details
-        """
-        # Zero grad parameters
-        super().zero_grad(set_to_none)
-        if self.is_state_initialised():
-            # Zero grad buffers
-            for b in self.buffers():
-                if b.grad_fn is not None:
-                    b.detach_()
-                else:
-                    b.requires_grad_(False)
+        pass
 
     def forward(self, *args, **kwargs):
         """
@@ -49,46 +31,16 @@ class StatefulLayer(torch.nn.Module):
         return True
 
     def state_has_shape(self, shape) -> bool:
-        """Checks if all state have a given shape."""
-        for buff in self.buffers():
-            if buff.shape != shape:
-                return False
-        return True
+        pass
 
     def handle_state_batch_size_mismatch(self, new_batch_size: int):
-        """Handles the state mismatch based on the new batch size by randomly selecting
-        `new_batch_size` number of states from the previous batch_size in a repated way.
-
-        Args:
-            new_batch_size: int
-                New batch size.
-        """
-        for name, buffer in self.named_buffers():
-            indices = torch.randint(
-                low=0, high=buffer.shape[0], size=(new_batch_size,)
-            ).to(buffer.device)
-            new_buffer = torch.index_select(buffer, 0, indices)
-            self.register_buffer(name, new_buffer)
+        pass
 
     def has_trailing_dimension(self, trailing_dim: Tuple[int, int, int]) -> bool:
-        """Checks if the trailing dimension (ch, y, x) matches the given.
-
-        Args:
-            trailing_dim: Tuple[int, int, int]
-                Three tuple in (channel, y, x) dimensions.
-        Returns:
-            bool: Whether all the states dimensions match.
-        """
-        for buff in self.buffers():
-            if buff.shape[1:] != torch.Size(trailing_dim):
-                return False
-        return True
+        pass
 
     def init_state_with_shape(self, shape, randomize: bool = False) -> None:
-        """Initialise state/buffers with either zeros or random tensor of specific shape."""
-        for name, buffer in self.named_buffers():
-            self.register_buffer(name, torch.zeros(shape, device=buffer.device))
-        self.reset_states(randomize=randomize)
+        pass
 
     def reset_states(
         self,
@@ -120,9 +72,7 @@ class StatefulLayer(torch.nn.Module):
                         min_value, max_value = value_ranges[name]
                     else:
                         min_value, max_value = (0.0, 1.0)
-                    # Initialize with uniform distribution
                     torch.nn.init.uniform_(buffer)
-                    # Rescale the value
                     buffer.data = buffer * (max_value - min_value) + min_value
                 else:
                     buffer.zero_()
@@ -152,11 +102,9 @@ class StatefulLayer(torch.nn.Module):
     def __deepcopy__(self, memo=None):
         copy = self.__class__(**self._param_dict)
 
-        # Copy parameters
         for name, param in self.named_parameters():
             new_inst_param = getattr(copy, name)
             new_inst_param.data = param.data.clone()
-        # Copy buffers (using state dict will fail if buffers have non-default shapes)
         for name, buffer in self.named_buffers():
             new_inst_buffer = getattr(copy, name)
             new_inst_buffer.data = buffer.data.clone()  # Copy parameters
@@ -165,16 +113,12 @@ class StatefulLayer(torch.nn.Module):
 
     @property
     def _param_dict(self) -> dict:
-        """Dict of all parameters relevant for creating a new instance with same parameters as
-        `self`."""
-        return dict()
+        pass
 
     @property
     def arg_dict(self) -> dict:
-        """A public getter function for the constructor arguments."""
-        return self._param_dict
+        pass
 
     @property
     def does_spike(self) -> bool:
-        """Return True if the layer has an activation function."""
-        return hasattr(self, "spike_fn") and self.spike_fn is not None
+        pass

@@ -11,7 +11,6 @@ import torch
 
 from .utils import parse_device_id, standardize_device_id
 
-# A map of all device types and their corresponding samna `device_name`
 device_types = {
     "speck2e": "Speck2eTestBoard",  # with a capital B for board
     "speck2edevkit": "Speck2eDevKit",
@@ -31,88 +30,23 @@ device_map = {}
 def enable_timestamps(
     device_id: str,
 ) -> None:
-    """
-    Enable timestamps of the samna node.
-
-    Args:
-        device_id: Name of the device to initialize. Required for different
-            existing APIs for Speck chips
-    """
-    device_id = standardize_device_id(device_id=device_id)
-    device_info = device_map[device_id]
-    device_handle = samna.device.open_device(device_info)
-    device_handle.get_stop_watch().start()
+    pass
 
 
 def disable_timestamps(
     device_id: str,
 ) -> None:
-    """
-    Disable timestamps of the samna node.
-
-    Args:
-        device_id: Name of the device to initialize. Required for different
-            existing APIs for Speck chips
-    """
-    device_id = standardize_device_id(device_id=device_id)
-    device_info = device_map[device_id]
-    device_handle = samna.device.open_device(device_info)
-    device_handle.get_stop_watch().stop()
+    pass
 
 
 def reset_timestamps(
     device_id: str,
 ) -> None:
-    """
-    Reset timestamps of the samna node.
-
-    Args:
-        device_id: Name of the device to initialize. Required for different
-            existing APIs for Speck chips
-    """
-    device_id = standardize_device_id(device_id=device_id)
-    device_info = device_map[device_id]
-    device_handle = samna.device.open_device(device_info)
-    device_handle.get_stop_watch().reset()
+    pass
 
 
 def events_to_xytp(event_list: List, layer: int) -> np.array:
-    """
-    Convert an eventList read from `samna` to a numpy structured array of `x`, `y`, `t`,
-    `channel`.
-
-    Args:
-        event_list: A list comprising of events from samna API.
-        layer: The index of layer for which the data needs to be converted.
-
-    Returns:
-        A numpy structured array with columns `x`, `y`, `t`, `channel`.
-    """
-    evs_filtered = list(
-        filter(
-            lambda x: isinstance(
-                x, (samna.speck2e.event.Spike, samna.speck2f.event.Spike)
-            )
-            and x.layer == layer,
-            event_list,
-        )
-    )
-    xytc = np.empty(
-        len(evs_filtered),
-        dtype=[
-            ("x", np.uint16),
-            ("y", np.uint16),
-            ("t", np.uint64),
-            ("channel", np.uint16),
-        ],
-    )
-
-    for i, event in enumerate(evs_filtered):
-        xytc[i]["x"] = event.x
-        xytc[i]["y"] = event.y
-        xytc[i]["t"] = event.timestamp
-        xytc[i]["channel"] = event.feature
-    return xytc
+    pass
 
 
 def get_device_map() -> Dict:
@@ -128,18 +62,13 @@ def get_device_map() -> Dict:
         devices.sort(key=lambda x: x.usb_device_address)
         return devices
 
-    # Get all devices available
     devices = samna.device.get_all_devices()
-    # Group by device_type_name
     device_groups = groupby(devices, lambda x: x.device_type_name)
-    # Switch keys from samna's device_type_name to device_type names
-    # -- guarantee is a supported device
     device_groups = {
         device_type_map[k]: sort_devices(list(v))
         for k, v in device_groups
         if k in device_type_map
     }
-    # Flat map
     for dev_type, dev_list in device_groups.items():
         for i, dev in enumerate(dev_list):
             device_map[f"{dev_type}:{i}"] = dev
@@ -147,32 +76,11 @@ def get_device_map() -> Dict:
 
 
 def is_device_type(dev_info: samna.device.DeviceInfo, dev_type: str) -> bool:
-    """Check if a DeviceInfo object is of a given device type `dev_type`
-
-    Args:
-        dev_info: samna.device.DeviceInfo. Device info object.
-        dev_type: Device type as a string.
-
-    Returns:
-        bool
-    """
-    return dev_info.device_type_name == device_types[dev_type]
+    pass
 
 
 def discover_device(device_id: str):
-    """Discover a samna device by device_name:device_id pair.
-
-    Args:
-        device_id: Device name/identifier (speck2fdevkit:0 or speck2edevkit:0)
-            The convention is similar to that of pytorch GPU identifier i.e.,
-            cuda:0 , cuda:1 etc.
-
-    Returns:
-        samna.device.DeviceInfo
-    """
-    device_id = standardize_device_id(device_id=device_id)
-    device_info = device_map[device_id]
-    return device_info
+    pass
 
 
 def open_device(device_id: str):
@@ -221,30 +129,7 @@ def launch_visualizer(
     height_proportion: float = 0.6,
     disjoint_process: bool = True,
 ):
-    """Launch the samna visualizer in a separate process.
-
-    NOTE: MacOS users will want to use disjoint_process as True as a GUI process cannot be launched as a subprocess.
-
-    Args:
-        receiver_endpoint (str): the visualiser’s endpoint for receiving events (e.g. “tcp://0.0.0.0:33335”).
-        width_proportion (bool): the rate between window width and workarea width of main monitor, default 0.75 which means this window has a width which equals to 3/4 width of main monitor’s workarea.
-        height_proportion (bool): the rate between window height and workarea height of main monitor, default 0.75 which means this window has a height which equals to 3/4 height of main monitor’s workarea.
-        disjoint_process (bool, optional): If true, will be launched in a disjoint shell process. Defaults to True. If false, this just runs the default samna command.
-
-    Returns:
-        gui_process (Process): The gui sub-process handle if disjoint_process was False.
-    """
-    if disjoint_process:
-        os.system(
-            f"samnagui -W {width_proportion} -H {height_proportion} {receiver_endpoint} &"
-        )
-    else:
-        gui_process = Process(
-            target=samnagui.run_visualizer,
-            args=(receiver_endpoint, width_proportion, height_proportion),
-        )
-        gui_process.start()
-        return gui_process
+    pass
 
 
 def calculate_neuron_address(
@@ -263,7 +148,6 @@ def calculate_neuron_address(
     Returns:
         neuron_address: int
     """
-    # calculate how many bits it takes based on the feature map size
     channel, height, width = feature_map_size
     x_bits = math.ceil(math.log2(width))
     y_bits = math.ceil(math.log2(height))
@@ -297,7 +181,6 @@ def neuron_address_to_cxy(
     Returns:
         neuron_cxy: Tuple[int, int, int] the [channel, x, y] of the neuron
     """
-    # calculate how many bits it takes based on the feature map size
     channel, height, width = feature_map_size
     x_bits = math.ceil(math.log2(width))
     y_bits = math.ceil(math.log2(height))

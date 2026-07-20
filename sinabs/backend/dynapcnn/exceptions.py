@@ -24,7 +24,6 @@ class UnexpectedLayer(Exception):
 
 
 class InputConfigurationError(Exception):
-    """Is raised when input to DynapCNN is not configured correctly."""
 
     pass
 
@@ -85,7 +84,6 @@ class InvalidModelWithDVSSetup(Exception):
         )
 
 
-# Edge exceptions.
 
 
 class InvalidEdge(Exception):

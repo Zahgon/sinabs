@@ -8,7 +8,6 @@ from sinabs.backend.dynapcnn.dynapcnn_layer import DynapcnnLayer
 from .dynapcnn import DynapcnnConfigBuilder
 
 
-# Inherit DynapCNNConfigBuilder to share implementation with other DynapCNN/Speck devices
 class Speck2FConfigBuilder(DynapcnnConfigBuilder):
     @classmethod
     def get_samna_module(cls):
@@ -20,7 +19,7 @@ class Speck2FConfigBuilder(DynapcnnConfigBuilder):
 
     @classmethod
     def get_dvs_layer_config(cls):
-        return SpeckConfiguration().DVSLayerConfig
+        pass
 
     @classmethod
     def get_input_buffer(cls):
